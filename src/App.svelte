@@ -1,28 +1,39 @@
 <script>
-	import Input from './Input.svelte';
-	import { writable } from 'svelte/store';
-	
-	let information = writable
-	
-	
+	import Input from "./Input.svelte";
+	//import { staticVariables } from "./staticVariableStore";
+	import Interest from './Interest.svelte'; 
+    import Results from "./Results.svelte";
+
 </script>
 
-<h1>Investment</h1>
-<div class=initial>
-	<Input header='Capital Inicial'/>
-	<Input header='Valor Desejado'/>
-	<Input header='Rendimento'/>
-</div>
-<br>
-<div class=interactive>
-	<Input header='Aporte'/>
-	<Input header='Meses'/>
+<div class=app>
+	<div class=parameters>
+		<div class=money>
+			<Input header=Capital propertyToUpdate=initialCapital/>
+			<Input header=Objetivo propertyToUpdate=desiredAmount/>
+		</div>
+		<Interest/>
+	</div>
+	<Results/>
+	<div class=results>
+		<div class=contribution></div>
+		<div class=time>
+			<div class=months></div>
+			<div class=years></div>
+		</div>
+	</div>
 </div>
 
 <style>
-	div {
+	.money {
 		width: 100%;
 		display: flex;
-		gap: 20px;
+		flex-direction: column;
+	}
+	
+	.parameters {
+		width: 100%;
+		display: flex;
+		gap: 30px;
 	}
 </style>

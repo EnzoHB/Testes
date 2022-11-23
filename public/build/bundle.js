@@ -27,17 +27,8 @@ var app = (function () {
     function is_empty(obj) {
         return Object.keys(obj).length === 0;
     }
-    function subscribe(store, ...callbacks) {
-        if (store == null) {
-            return noop;
-        }
-        const unsub = store.subscribe(...callbacks);
-        return unsub.unsubscribe ? () => unsub.unsubscribe() : unsub;
-    }
-    function get_store_value(store) {
-        let value;
-        subscribe(store, _ => value = _)();
-        return value;
+    function null_to_empty(value) {
+        return value == null ? '' : value;
     }
     function append(target, node) {
         target.appendChild(node);
@@ -48,6 +39,12 @@ var app = (function () {
     function detach(node) {
         if (node.parentNode) {
             node.parentNode.removeChild(node);
+        }
+    }
+    function destroy_each(iterations, detaching) {
+        for (let i = 0; i < iterations.length; i += 1) {
+            if (iterations[i])
+                iterations[i].d(detaching);
         }
     }
     function element(name) {
@@ -69,14 +66,8 @@ var app = (function () {
         else if (node.getAttribute(attribute) !== value)
             node.setAttribute(attribute, value);
     }
-    function to_number(value) {
-        return value === '' ? null : +value;
-    }
     function children(element) {
         return Array.from(element.childNodes);
-    }
-    function set_input_value(input, value) {
-        input.value = value == null ? '' : value;
     }
     function custom_event(type, detail, { bubbles = false, cancelable = false } = {}) {
         const e = document.createEvent('CustomEvent');
@@ -87,6 +78,23 @@ var app = (function () {
     let current_component;
     function set_current_component(component) {
         current_component = component;
+    }
+    function get_current_component() {
+        if (!current_component)
+            throw new Error('Function called outside component initialization');
+        return current_component;
+    }
+    /**
+     * The `onMount` function schedules a callback to run as soon as the component has been mounted to the DOM.
+     * It must be called during the component's initialisation (but doesn't need to live *inside* the component;
+     * it can be called from an external module).
+     *
+     * `onMount` does not run inside a [server-side component](/docs#run-time-server-side-component-api).
+     *
+     * https://svelte.dev/docs#run-time-svelte-onmount
+     */
+    function onMount(fn) {
+        get_current_component().$$.on_mount.push(fn);
     }
 
     const dirty_components = [];
@@ -171,30 +179,10 @@ var app = (function () {
         }
     }
     const outroing = new Set();
-    let outros;
     function transition_in(block, local) {
         if (block && block.i) {
             outroing.delete(block);
             block.i(local);
-        }
-    }
-    function transition_out(block, local, detach, callback) {
-        if (block && block.o) {
-            if (outroing.has(block))
-                return;
-            outroing.add(block);
-            outros.c.push(() => {
-                outroing.delete(block);
-                if (callback) {
-                    if (detach)
-                        block.d(1);
-                    callback();
-                }
-            });
-            block.o(local);
-        }
-        else if (callback) {
-            callback();
         }
     }
 
@@ -203,9 +191,6 @@ var app = (function () {
         : typeof globalThis !== 'undefined'
             ? globalThis
             : global);
-    function create_component(block) {
-        block && block.c();
-    }
     function mount_component(component, target, anchor, customElement) {
         const { fragment, after_update } = component.$$;
         fragment && fragment.m(target, anchor);
@@ -380,6 +365,15 @@ var app = (function () {
         dispatch_dev('SvelteDOMSetData', { node: text, data });
         text.data = data;
     }
+    function validate_each_argument(arg) {
+        if (typeof arg !== 'string' && !(arg && typeof arg === 'object' && 'length' in arg)) {
+            let msg = '{#each} only iterates over array-like objects.';
+            if (typeof Symbol === 'function' && arg && Symbol.iterator in arg) {
+                msg += ' You can use a spread to convert this iterable into an array.';
+            }
+            throw new Error(msg);
+        }
+    }
     function validate_slots(name, slot, keys) {
         for (const slot_key of Object.keys(slot)) {
             if (!~keys.indexOf(slot_key)) {
@@ -407,462 +401,95 @@ var app = (function () {
         $inject_state() { }
     }
 
-    const subscriber_queue = [];
-    /**
-     * Create a `Writable` store that allows both updating and reading by subscription.
-     * @param {*=}value initial value
-     * @param {StartStopNotifier=}start start and stop notifications for subscriptions
-     */
-    function writable(value, start = noop) {
-        let stop;
-        const subscribers = new Set();
-        function set(new_value) {
-            if (safe_not_equal(value, new_value)) {
-                value = new_value;
-                if (stop) { // store is ready
-                    const run_queue = !subscriber_queue.length;
-                    for (const subscriber of subscribers) {
-                        subscriber[1]();
-                        subscriber_queue.push(subscriber, value);
-                    }
-                    if (run_queue) {
-                        for (let i = 0; i < subscriber_queue.length; i += 2) {
-                            subscriber_queue[i][0](subscriber_queue[i + 1]);
-                        }
-                        subscriber_queue.length = 0;
-                    }
-                }
-            }
-        }
-        function update(fn) {
-            set(fn(value));
-        }
-        function subscribe(run, invalidate = noop) {
-            const subscriber = [run, invalidate];
-            subscribers.add(subscriber);
-            if (subscribers.size === 1) {
-                stop = start(set) || noop;
-            }
-            run(value);
-            return () => {
-                subscribers.delete(subscriber);
-                if (subscribers.size === 0) {
-                    stop();
-                    stop = null;
-                }
-            };
-        }
-        return { set, update, subscribe };
+    /* src\App.svelte generated by Svelte v3.53.1 */
+
+    const { Object: Object_1, console: console_1 } = globals;
+    const file = "src\\App.svelte";
+
+    function get_each_context(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[25] = list[i];
+    	return child_ctx;
     }
 
-    const staticVariables = writable({
-        desiredAmount: 0,
-        initialCapital: 0,
-        monthlyInterest: 0,
-    });
-
-    /* src\Input.svelte generated by Svelte v3.53.1 */
-    const file$3 = "src\\Input.svelte";
-
-    function create_fragment$3(ctx) {
+    // (114:2) {#each keyboard as key}
+    function create_each_block(ctx) {
     	let div;
-    	let h1;
-    	let t0;
-    	let t1;
-    	let input;
+    	let t_value = /*key*/ ctx[25].symbol + "";
+    	let t;
     	let mounted;
     	let dispose;
 
     	const block = {
     		c: function create() {
     			div = element("div");
-    			h1 = element("h1");
-    			t0 = text(/*header*/ ctx[0]);
-    			t1 = space();
-    			input = element("input");
-    			add_location(h1, file$3, 18, 4, 315);
-    			attr_dev(input, "type", "number");
-    			attr_dev(input, "class", "svelte-15jk9xa");
-    			add_location(input, file$3, 19, 4, 338);
-    			attr_dev(div, "class", "svelte-15jk9xa");
-    			add_location(div, file$3, 17, 0, 304);
-    		},
-    		l: function claim(nodes) {
-    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    			t = text(t_value);
+    			attr_dev(div, "class", "" + (null_to_empty(/*key*/ ctx[25].classes) + " svelte-4jtm51"));
+    			attr_dev(div, "id", /*key*/ ctx[25].id);
+    			add_location(div, file, 115, 3, 2408);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
-    			append_dev(div, h1);
-    			append_dev(h1, t0);
-    			append_dev(div, t1);
-    			append_dev(div, input);
-    			set_input_value(input, /*value*/ ctx[1]);
+    			append_dev(div, t);
 
     			if (!mounted) {
-    				dispose = [
-    					listen_dev(input, "input", /*input_input_handler*/ ctx[4]),
-    					listen_dev(input, "input", /*handleInput*/ ctx[2], false, false, false)
-    				];
-
+    				dispose = listen_dev(div, "click", /*key*/ ctx[25].callback, false, false, false);
     				mounted = true;
     			}
     		},
-    		p: function update(ctx, [dirty]) {
-    			if (dirty & /*header*/ 1) set_data_dev(t0, /*header*/ ctx[0]);
-
-    			if (dirty & /*value*/ 2 && to_number(input.value) !== /*value*/ ctx[1]) {
-    				set_input_value(input, /*value*/ ctx[1]);
-    			}
+    		p: function update(new_ctx, dirty) {
+    			ctx = new_ctx;
     		},
-    		i: noop,
-    		o: noop,
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(div);
     			mounted = false;
-    			run_all(dispose);
+    			dispose();
     		}
     	};
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$3.name,
-    		type: "component",
-    		source: "",
+    		id: create_each_block.name,
+    		type: "each",
+    		source: "(114:2) {#each keyboard as key}",
     		ctx
     	});
 
     	return block;
     }
 
-    function instance$3($$self, $$props, $$invalidate) {
-    	let { $$slots: slots = {}, $$scope } = $$props;
-    	validate_slots('Input', slots, []);
-    	let { propertyToUpdate } = $$props;
-    	let { header } = $$props;
-    	let value;
-
-    	function handleInput(event) {
-    		staticVariables.update(information => (information[propertyToUpdate] = value, information));
-    	}
-
-    	$$self.$$.on_mount.push(function () {
-    		if (propertyToUpdate === undefined && !('propertyToUpdate' in $$props || $$self.$$.bound[$$self.$$.props['propertyToUpdate']])) {
-    			console.warn("<Input> was created without expected prop 'propertyToUpdate'");
-    		}
-
-    		if (header === undefined && !('header' in $$props || $$self.$$.bound[$$self.$$.props['header']])) {
-    			console.warn("<Input> was created without expected prop 'header'");
-    		}
-    	});
-
-    	const writable_props = ['propertyToUpdate', 'header'];
-
-    	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<Input> was created with unknown prop '${key}'`);
-    	});
-
-    	function input_input_handler() {
-    		value = to_number(this.value);
-    		$$invalidate(1, value);
-    	}
-
-    	$$self.$$set = $$props => {
-    		if ('propertyToUpdate' in $$props) $$invalidate(3, propertyToUpdate = $$props.propertyToUpdate);
-    		if ('header' in $$props) $$invalidate(0, header = $$props.header);
-    	};
-
-    	$$self.$capture_state = () => ({
-    		staticVariables,
-    		propertyToUpdate,
-    		header,
-    		value,
-    		handleInput
-    	});
-
-    	$$self.$inject_state = $$props => {
-    		if ('propertyToUpdate' in $$props) $$invalidate(3, propertyToUpdate = $$props.propertyToUpdate);
-    		if ('header' in $$props) $$invalidate(0, header = $$props.header);
-    		if ('value' in $$props) $$invalidate(1, value = $$props.value);
-    	};
-
-    	if ($$props && "$$inject" in $$props) {
-    		$$self.$inject_state($$props.$$inject);
-    	}
-
-    	return [header, value, handleInput, propertyToUpdate, input_input_handler];
-    }
-
-    class Input extends SvelteComponentDev {
-    	constructor(options) {
-    		super(options);
-    		init(this, options, instance$3, create_fragment$3, safe_not_equal, { propertyToUpdate: 3, header: 0 });
-
-    		dispatch_dev("SvelteRegisterComponent", {
-    			component: this,
-    			tagName: "Input",
-    			options,
-    			id: create_fragment$3.name
-    		});
-    	}
-
-    	get propertyToUpdate() {
-    		throw new Error("<Input>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set propertyToUpdate(value) {
-    		throw new Error("<Input>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	get header() {
-    		throw new Error("<Input>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set header(value) {
-    		throw new Error("<Input>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-    }
-
-    /* src\Interest.svelte generated by Svelte v3.53.1 */
-    const file$2 = "src\\Interest.svelte";
-
-    function create_fragment$2(ctx) {
-    	let div;
-    	let h1;
-    	let t1;
-    	let h30;
-    	let t3;
-    	let input0;
-    	let t4;
-    	let h31;
-    	let t6;
-    	let input1;
-    	let mounted;
-    	let dispose;
-
-    	const block = {
-    		c: function create() {
-    			div = element("div");
-    			h1 = element("h1");
-    			h1.textContent = "Juros";
-    			t1 = space();
-    			h30 = element("h3");
-    			h30.textContent = "Anuais";
-    			t3 = space();
-    			input0 = element("input");
-    			t4 = space();
-    			h31 = element("h3");
-    			h31.textContent = "Mensais";
-    			t6 = space();
-    			input1 = element("input");
-    			add_location(h1, file$2, 36, 4, 775);
-    			attr_dev(h30, "class", "svelte-r8s7fi");
-    			add_location(h30, file$2, 37, 4, 795);
-    			attr_dev(input0, "type", "number");
-    			attr_dev(input0, "class", "svelte-r8s7fi");
-    			add_location(input0, file$2, 38, 4, 816);
-    			attr_dev(h31, "class", "svelte-r8s7fi");
-    			add_location(h31, file$2, 39, 4, 900);
-    			attr_dev(input1, "type", "number");
-    			attr_dev(input1, "class", "svelte-r8s7fi");
-    			add_location(input1, file$2, 40, 4, 922);
-    			attr_dev(div, "id", "container");
-    			attr_dev(div, "class", "svelte-r8s7fi");
-    			add_location(div, file$2, 35, 0, 751);
-    		},
-    		l: function claim(nodes) {
-    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, div, anchor);
-    			append_dev(div, h1);
-    			append_dev(div, t1);
-    			append_dev(div, h30);
-    			append_dev(div, t3);
-    			append_dev(div, input0);
-    			set_input_value(input0, /*annually100*/ ctx[0]);
-    			append_dev(div, t4);
-    			append_dev(div, h31);
-    			append_dev(div, t6);
-    			append_dev(div, input1);
-    			set_input_value(input1, /*monthly100*/ ctx[1]);
-
-    			if (!mounted) {
-    				dispose = [
-    					listen_dev(input0, "input", /*input0_input_handler*/ ctx[5]),
-    					listen_dev(input0, "input", /*updateMonthlyInterest*/ ctx[2], false, false, false),
-    					listen_dev(input1, "input", /*input1_input_handler*/ ctx[6]),
-    					listen_dev(input1, "input", /*updateAnualInterest*/ ctx[3], false, false, false)
-    				];
-
-    				mounted = true;
-    			}
-    		},
-    		p: function update(ctx, [dirty]) {
-    			if (dirty & /*annually100*/ 1 && to_number(input0.value) !== /*annually100*/ ctx[0]) {
-    				set_input_value(input0, /*annually100*/ ctx[0]);
-    			}
-
-    			if (dirty & /*monthly100*/ 2 && to_number(input1.value) !== /*monthly100*/ ctx[1]) {
-    				set_input_value(input1, /*monthly100*/ ctx[1]);
-    			}
-    		},
-    		i: noop,
-    		o: noop,
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(div);
-    			mounted = false;
-    			run_all(dispose);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_fragment$2.name,
-    		type: "component",
-    		source: "",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    function instance$2($$self, $$props, $$invalidate) {
-    	let { $$slots: slots = {}, $$scope } = $$props;
-    	validate_slots('Interest', slots, []);
-    	let annually100 = 15;
-    	let monthly100;
-    	let annually;
-    	let monthly;
-
-    	function updateMonthlyInterest(event) {
-    		annually = annually100 / 100;
-    		$$invalidate(4, monthly = Math.pow(1 + annually, 1 / 12) - 1);
-    		$$invalidate(1, monthly100 = (monthly * 100).toFixed(3));
-    	}
-
-    	function updateAnualInterest(event) {
-    		$$invalidate(4, monthly = monthly100 / 100);
-    		annually = Math.pow(1 + monthly, 12) - 1;
-    		$$invalidate(0, annually100 = (annually * 100).toFixed(3));
-    	}
-    	updateMonthlyInterest();
-    	const writable_props = [];
-
-    	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<Interest> was created with unknown prop '${key}'`);
-    	});
-
-    	function input0_input_handler() {
-    		annually100 = to_number(this.value);
-    		$$invalidate(0, annually100);
-    	}
-
-    	function input1_input_handler() {
-    		monthly100 = to_number(this.value);
-    		$$invalidate(1, monthly100);
-    	}
-
-    	$$self.$capture_state = () => ({
-    		staticVariables,
-    		annually100,
-    		monthly100,
-    		annually,
-    		monthly,
-    		updateMonthlyInterest,
-    		updateAnualInterest
-    	});
-
-    	$$self.$inject_state = $$props => {
-    		if ('annually100' in $$props) $$invalidate(0, annually100 = $$props.annually100);
-    		if ('monthly100' in $$props) $$invalidate(1, monthly100 = $$props.monthly100);
-    		if ('annually' in $$props) annually = $$props.annually;
-    		if ('monthly' in $$props) $$invalidate(4, monthly = $$props.monthly);
-    	};
-
-    	if ($$props && "$$inject" in $$props) {
-    		$$self.$inject_state($$props.$$inject);
-    	}
-
-    	$$self.$$.update = () => {
-    		if ($$self.$$.dirty & /*monthly*/ 16) {
-    			{
-    				staticVariables.update(info => (info.monthlyInterest = monthly, info));
-    			}
-    		}
-    	};
-
-    	return [
-    		annually100,
-    		monthly100,
-    		updateMonthlyInterest,
-    		updateAnualInterest,
-    		monthly,
-    		input0_input_handler,
-    		input1_input_handler
-    	];
-    }
-
-    class Interest extends SvelteComponentDev {
-    	constructor(options) {
-    		super(options);
-    		init(this, options, instance$2, create_fragment$2, safe_not_equal, {});
-
-    		dispatch_dev("SvelteRegisterComponent", {
-    			component: this,
-    			tagName: "Interest",
-    			options,
-    			id: create_fragment$2.name
-    		});
-    	}
-    }
-
-    /* src\Results.svelte generated by Svelte v3.53.1 */
-
-    const { console: console_1 } = globals;
-    const file$1 = "src\\Results.svelte";
-
-    function create_fragment$1(ctx) {
+    function create_fragment(ctx) {
     	let div2;
     	let div0;
-    	let h10;
+    	let t0;
     	let t1;
-    	let input0;
-    	let t2;
     	let div1;
-    	let h11;
-    	let t4;
-    	let input1;
-    	let mounted;
-    	let dispose;
+    	let each_value = /*keyboard*/ ctx[1];
+    	validate_each_argument(each_value);
+    	let each_blocks = [];
+
+    	for (let i = 0; i < each_value.length; i += 1) {
+    		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
+    	}
 
     	const block = {
     		c: function create() {
     			div2 = element("div");
     			div0 = element("div");
-    			h10 = element("h1");
-    			h10.textContent = "Aporte";
+    			t0 = text(/*display*/ ctx[0]);
     			t1 = space();
-    			input0 = element("input");
-    			t2 = space();
     			div1 = element("div");
-    			h11 = element("h1");
-    			h11.textContent = "Meses";
-    			t4 = space();
-    			input1 = element("input");
-    			add_location(h10, file$1, 41, 8, 1310);
-    			attr_dev(input0, "type", "number");
-    			attr_dev(input0, "class", "svelte-su8jbf");
-    			add_location(input0, file$1, 42, 8, 1335);
-    			attr_dev(div0, "class", "container svelte-su8jbf");
-    			add_location(div0, file$1, 40, 4, 1279);
-    			add_location(h11, file$1, 45, 8, 1453);
-    			attr_dev(input1, "type", "number");
-    			attr_dev(input1, "class", "svelte-su8jbf");
-    			add_location(input1, file$1, 46, 8, 1477);
-    			attr_dev(div1, "class", "container svelte-su8jbf");
-    			add_location(div1, file$1, 44, 4, 1422);
-    			attr_dev(div2, "class", "svelte-su8jbf");
-    			add_location(div2, file$1, 39, 0, 1268);
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			attr_dev(div0, "class", "screen svelte-4jtm51");
+    			add_location(div0, file, 111, 1, 2259);
+    			attr_dev(div1, "class", "keyboard svelte-4jtm51");
+    			add_location(div1, file, 112, 1, 2295);
+    			attr_dev(div2, "class", "app svelte-4jtm51");
+    			add_location(div2, file, 110, 0, 2241);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -870,273 +497,46 @@ var app = (function () {
     		m: function mount(target, anchor) {
     			insert_dev(target, div2, anchor);
     			append_dev(div2, div0);
-    			append_dev(div0, h10);
-    			append_dev(div0, t1);
-    			append_dev(div0, input0);
-    			set_input_value(input0, /*contribution*/ ctx[0]);
-    			append_dev(div2, t2);
+    			append_dev(div0, t0);
+    			append_dev(div2, t1);
     			append_dev(div2, div1);
-    			append_dev(div1, h11);
-    			append_dev(div1, t4);
-    			append_dev(div1, input1);
-    			set_input_value(input1, /*months*/ ctx[1]);
 
-    			if (!mounted) {
-    				dispose = [
-    					listen_dev(input0, "input", /*input0_input_handler*/ ctx[4]),
-    					listen_dev(input0, "input", /*updateMonths*/ ctx[2], false, false, false),
-    					listen_dev(input1, "input", /*input1_input_handler*/ ctx[5]),
-    					listen_dev(input1, "input", /*updateContribution*/ ctx[3], false, false, false)
-    				];
-
-    				mounted = true;
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].m(div1, null);
     			}
     		},
     		p: function update(ctx, [dirty]) {
-    			if (dirty & /*contribution*/ 1 && to_number(input0.value) !== /*contribution*/ ctx[0]) {
-    				set_input_value(input0, /*contribution*/ ctx[0]);
-    			}
+    			if (dirty & /*display*/ 1) set_data_dev(t0, /*display*/ ctx[0]);
 
-    			if (dirty & /*months*/ 2 && to_number(input1.value) !== /*months*/ ctx[1]) {
-    				set_input_value(input1, /*months*/ ctx[1]);
+    			if (dirty & /*keyboard*/ 2) {
+    				each_value = /*keyboard*/ ctx[1];
+    				validate_each_argument(each_value);
+    				let i;
+
+    				for (i = 0; i < each_value.length; i += 1) {
+    					const child_ctx = get_each_context(ctx, each_value, i);
+
+    					if (each_blocks[i]) {
+    						each_blocks[i].p(child_ctx, dirty);
+    					} else {
+    						each_blocks[i] = create_each_block(child_ctx);
+    						each_blocks[i].c();
+    						each_blocks[i].m(div1, null);
+    					}
+    				}
+
+    				for (; i < each_blocks.length; i += 1) {
+    					each_blocks[i].d(1);
+    				}
+
+    				each_blocks.length = each_value.length;
     			}
     		},
     		i: noop,
     		o: noop,
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(div2);
-    			mounted = false;
-    			run_all(dispose);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_fragment$1.name,
-    		type: "component",
-    		source: "",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    function getMonths(monthlyContribution, { initialCapital, monthlyInterest, desiredAmount }) {
-    	console.log(monthlyContribution, initialCapital, monthlyInterest, desiredAmount);
-    	return (Math.log10(desiredAmount * monthlyInterest + monthlyContribution) - Math.log10(initialCapital * monthlyInterest + monthlyContribution)) / Math.log10(monthlyInterest + 1);
-    }
-
-    function getContribution(months, { initialCapital, monthlyInterest, desiredAmount }) {
-    	let m = Math.pow(1 + monthlyInterest, months);
-    	return (initialCapital * m - desiredAmount) * monthlyInterest / (1 - m);
-    }
-
-    function instance$1($$self, $$props, $$invalidate) {
-    	let { $$slots: slots = {}, $$scope } = $$props;
-    	validate_slots('Results', slots, []);
-    	let params;
-    	staticVariables.subscribe(data => params = data);
-    	let contribution = 0;
-    	let months = 0;
-
-    	function updateMonths() {
-    		console.log(get_store_value(staticVariables));
-    		$$invalidate(1, months = getMonths(contribution, params).toFixed(1));
-    	}
-
-    	function updateContribution() {
-    		$$invalidate(0, contribution = getContribution(months, params).toFixed(1));
-    	}
-    	const writable_props = [];
-
-    	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1.warn(`<Results> was created with unknown prop '${key}'`);
-    	});
-
-    	function input0_input_handler() {
-    		contribution = to_number(this.value);
-    		$$invalidate(0, contribution);
-    	}
-
-    	function input1_input_handler() {
-    		months = to_number(this.value);
-    		$$invalidate(1, months);
-    	}
-
-    	$$self.$capture_state = () => ({
-    		get: get_store_value,
-    		staticVariables,
-    		params,
-    		contribution,
-    		months,
-    		updateMonths,
-    		updateContribution,
-    		getMonths,
-    		getContribution
-    	});
-
-    	$$self.$inject_state = $$props => {
-    		if ('params' in $$props) params = $$props.params;
-    		if ('contribution' in $$props) $$invalidate(0, contribution = $$props.contribution);
-    		if ('months' in $$props) $$invalidate(1, months = $$props.months);
-    	};
-
-    	if ($$props && "$$inject" in $$props) {
-    		$$self.$inject_state($$props.$$inject);
-    	}
-
-    	updateMonths();
-
-    	return [
-    		contribution,
-    		months,
-    		updateMonths,
-    		updateContribution,
-    		input0_input_handler,
-    		input1_input_handler
-    	];
-    }
-
-    class Results extends SvelteComponentDev {
-    	constructor(options) {
-    		super(options);
-    		init(this, options, instance$1, create_fragment$1, safe_not_equal, {});
-
-    		dispatch_dev("SvelteRegisterComponent", {
-    			component: this,
-    			tagName: "Results",
-    			options,
-    			id: create_fragment$1.name
-    		});
-    	}
-    }
-
-    /* src\App.svelte generated by Svelte v3.53.1 */
-    const file = "src\\App.svelte";
-
-    function create_fragment(ctx) {
-    	let div7;
-    	let div1;
-    	let div0;
-    	let input0;
-    	let t0;
-    	let input1;
-    	let t1;
-    	let interest;
-    	let t2;
-    	let results;
-    	let t3;
-    	let div6;
-    	let div2;
-    	let t4;
-    	let div5;
-    	let div3;
-    	let t5;
-    	let div4;
-    	let current;
-
-    	input0 = new Input({
-    			props: {
-    				header: "Capital",
-    				propertyToUpdate: "initialCapital"
-    			},
-    			$$inline: true
-    		});
-
-    	input1 = new Input({
-    			props: {
-    				header: "Objetivo",
-    				propertyToUpdate: "desiredAmount"
-    			},
-    			$$inline: true
-    		});
-
-    	interest = new Interest({ $$inline: true });
-    	results = new Results({ $$inline: true });
-
-    	const block = {
-    		c: function create() {
-    			div7 = element("div");
-    			div1 = element("div");
-    			div0 = element("div");
-    			create_component(input0.$$.fragment);
-    			t0 = space();
-    			create_component(input1.$$.fragment);
-    			t1 = space();
-    			create_component(interest.$$.fragment);
-    			t2 = space();
-    			create_component(results.$$.fragment);
-    			t3 = space();
-    			div6 = element("div");
-    			div2 = element("div");
-    			t4 = space();
-    			div5 = element("div");
-    			div3 = element("div");
-    			t5 = space();
-    			div4 = element("div");
-    			attr_dev(div0, "class", "money svelte-drvore");
-    			add_location(div0, file, 10, 2, 248);
-    			attr_dev(div1, "class", "parameters svelte-drvore");
-    			add_location(div1, file, 9, 1, 223);
-    			attr_dev(div2, "class", "contribution");
-    			add_location(div2, file, 18, 2, 450);
-    			attr_dev(div3, "class", "months");
-    			add_location(div3, file, 20, 3, 503);
-    			attr_dev(div4, "class", "years");
-    			add_location(div4, file, 21, 3, 531);
-    			attr_dev(div5, "class", "time");
-    			add_location(div5, file, 19, 2, 483);
-    			attr_dev(div6, "class", "results");
-    			add_location(div6, file, 17, 1, 428);
-    			attr_dev(div7, "class", "app");
-    			add_location(div7, file, 8, 0, 206);
-    		},
-    		l: function claim(nodes) {
-    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, div7, anchor);
-    			append_dev(div7, div1);
-    			append_dev(div1, div0);
-    			mount_component(input0, div0, null);
-    			append_dev(div0, t0);
-    			mount_component(input1, div0, null);
-    			append_dev(div1, t1);
-    			mount_component(interest, div1, null);
-    			append_dev(div7, t2);
-    			mount_component(results, div7, null);
-    			append_dev(div7, t3);
-    			append_dev(div7, div6);
-    			append_dev(div6, div2);
-    			append_dev(div6, t4);
-    			append_dev(div6, div5);
-    			append_dev(div5, div3);
-    			append_dev(div5, t5);
-    			append_dev(div5, div4);
-    			current = true;
-    		},
-    		p: noop,
-    		i: function intro(local) {
-    			if (current) return;
-    			transition_in(input0.$$.fragment, local);
-    			transition_in(input1.$$.fragment, local);
-    			transition_in(interest.$$.fragment, local);
-    			transition_in(results.$$.fragment, local);
-    			current = true;
-    		},
-    		o: function outro(local) {
-    			transition_out(input0.$$.fragment, local);
-    			transition_out(input1.$$.fragment, local);
-    			transition_out(interest.$$.fragment, local);
-    			transition_out(results.$$.fragment, local);
-    			current = false;
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(div7);
-    			destroy_component(input0);
-    			destroy_component(input1);
-    			destroy_component(interest);
-    			destroy_component(results);
+    			destroy_each(each_blocks, detaching);
     		}
     	};
 
@@ -1151,17 +551,164 @@ var app = (function () {
     	return block;
     }
 
+    function shortcut(symbol, callback) {
+    	return {
+    		id: symbol,
+    		symbol,
+    		classes: 'key shortcut',
+    		callback
+    	};
+    }
+
+    function calculate() {
+    	
+    }
+
+    function shift(number, houses) {
+    	let [integer, decimal] = String(Number(number).toFixed(2)).split('.');
+    	return Number(integer + decimal) / 10 ** (houses + decimal.length);
+    }
+
+    function convertToMonthlyInterest(interest) {
+    	interest = shift(interest, 2);
+    	return (Math.pow(1 + interest, 1 / 12) - 1).toFixed(5);
+    }
+
     function instance($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('App', slots, []);
+    	let display = "0";
+
+    	let parameters = {
+    		J: null,
+    		V: null,
+    		C: null,
+    		A: null,
+    		T: null
+    	};
+
+    	function variable(symbol) {
+    		return {
+    			id: symbol,
+    			symbol,
+    			classes: 'key variable',
+    			callback: () => {
+    				const entries = Object.entries(parameters);
+    				const filled = entries.every(([key, value]) => key != symbol && value != null);
+    				console.log(parameters);
+
+    				if (filled) {
+    					console.log('I am calculating');
+    					return $$invalidate(0, display = calculate());
+    				}
+
+    				$$invalidate(0, display = parameters[symbol] = Number(display));
+    				console.log('Now I am storing the parameter');
+    			}
+    		};
+    	}
+
+    	function digit(symbol) {
+    		return {
+    			id: symbol,
+    			symbol,
+    			classes: 'key digit',
+    			callback: event => display == "0"
+    			? $$invalidate(0, display = String(symbol))
+    			: $$invalidate(0, display += String(symbol))
+    		};
+    	}
+    	let k0 = digit(0);
+    	let k1 = digit(1);
+    	let k2 = digit(2);
+    	let k3 = digit(3);
+    	let k4 = digit(4);
+    	let k5 = digit(5);
+    	let k6 = digit(6);
+    	let k7 = digit(7);
+    	let k8 = digit(8);
+    	let k9 = digit(9);
+    	let sR = shortcut('R', () => $$invalidate(0, display = "0"));
+    	let sP = shortcut("%", () => $$invalidate(0, display = shift(Number(display), 2)));
+    	let sC = shortcut("a%", () => $$invalidate(0, display = convertToMonthlyInterest(Number(display))));
+    	let sK = shortcut('K', () => $$invalidate(0, display += `000`));
+    	let sD = shortcut('.', () => $$invalidate(0, display += "."));
+    	let vJ = variable('J');
+    	let vV = variable('V');
+    	let vC = variable('C');
+    	let vA = variable('A');
+    	let vT = variable('T');
+    	let keyboard = [sR, sP, sC, vJ, k7, k8, k9, vV, k4, k5, k6, vC, k1, k2, k3, vA, sK, k0, sD, vT];
     	const writable_props = [];
 
-    	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<App> was created with unknown prop '${key}'`);
+    	Object_1.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1.warn(`<App> was created with unknown prop '${key}'`);
     	});
 
-    	$$self.$capture_state = () => ({ Input, Interest, Results });
-    	return [];
+    	$$self.$capture_state = () => ({
+    		onMount,
+    		display,
+    		parameters,
+    		variable,
+    		shortcut,
+    		digit,
+    		calculate,
+    		k0,
+    		k1,
+    		k2,
+    		k3,
+    		k4,
+    		k5,
+    		k6,
+    		k7,
+    		k8,
+    		k9,
+    		sR,
+    		sP,
+    		sC,
+    		sK,
+    		sD,
+    		vJ,
+    		vV,
+    		vC,
+    		vA,
+    		vT,
+    		keyboard,
+    		shift,
+    		convertToMonthlyInterest
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ('display' in $$props) $$invalidate(0, display = $$props.display);
+    		if ('parameters' in $$props) parameters = $$props.parameters;
+    		if ('k0' in $$props) k0 = $$props.k0;
+    		if ('k1' in $$props) k1 = $$props.k1;
+    		if ('k2' in $$props) k2 = $$props.k2;
+    		if ('k3' in $$props) k3 = $$props.k3;
+    		if ('k4' in $$props) k4 = $$props.k4;
+    		if ('k5' in $$props) k5 = $$props.k5;
+    		if ('k6' in $$props) k6 = $$props.k6;
+    		if ('k7' in $$props) k7 = $$props.k7;
+    		if ('k8' in $$props) k8 = $$props.k8;
+    		if ('k9' in $$props) k9 = $$props.k9;
+    		if ('sR' in $$props) sR = $$props.sR;
+    		if ('sP' in $$props) sP = $$props.sP;
+    		if ('sC' in $$props) sC = $$props.sC;
+    		if ('sK' in $$props) sK = $$props.sK;
+    		if ('sD' in $$props) sD = $$props.sD;
+    		if ('vJ' in $$props) vJ = $$props.vJ;
+    		if ('vV' in $$props) vV = $$props.vV;
+    		if ('vC' in $$props) vC = $$props.vC;
+    		if ('vA' in $$props) vA = $$props.vA;
+    		if ('vT' in $$props) vT = $$props.vT;
+    		if ('keyboard' in $$props) $$invalidate(1, keyboard = $$props.keyboard);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	return [display, keyboard];
     }
 
     class App extends SvelteComponentDev {

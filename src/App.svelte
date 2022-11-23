@@ -1,5 +1,7 @@
 <script>
     import { onMount } from "svelte";
+    import Key from "./Key.svelte";
+    import Parameter from "./Parameter.svelte";
 
 /**
  * -
@@ -8,15 +10,10 @@
  * 
  */
 
- 	let display = "0";
-	let parameters = {
-		J: null,
-		V: null,
-		C: null,
-		A: null,
-		T: null,
-	};
 
+ 	let display = "0";
+
+	/*
 	function variable(symbol) {
 		return {
 			id: symbol,
@@ -25,20 +22,22 @@
 			callback: () => {
 
 				const entries = Object.entries(parameters);
-				const filled = entries.every(([key, value]) => key != symbol && value != null);
+				const filled = entries.every(([key, value]) => key == symbol || value != null);
 
-				console.log(parameters);
+				console.log(filled);
 				if (filled) {
 					console.log('I am calculating');
 					return display = calculate(symbol);
 				}
 					
 				display = parameters[symbol] = Number(display);
+				console.log(parameters);
 				console.log('Now I am storing the parameter');
 			},
 		};
 	};
 
+	/*
 	function shortcut(symbol, callback) {
 		return {
 			id: symbol,
@@ -46,8 +45,9 @@
 			classes: 'key shortcut',
 			callback: callback,
 		};
-	};
+	};*/
 
+	/*	
 	function digit(symbol) {
 		return {
 			id: symbol,
@@ -56,64 +56,212 @@
 			callback: event => display == "0"? display = String(symbol) : display += String(symbol),
 		};
 	};
+	*/
 
-	function calculate() {
-
+	function digit(symbol) {
+		return { symbol: symbol, click: push, parameter: false, background: '#333', color: 'white' }
+	};
+	
+	function shortcut(symbol, callback) {
+		return { symbol: symbol, click: callback, parameter: false, background: '#a5a5a5', color: 'black' }
 	};
 
-	let k0 = digit(0);
-	let k1 = digit(1);
-	let k2 = digit(2);
-	let k3 = digit(3);
-	let k4 = digit(4);
-	let k5 = digit(5);
-	let k6 = digit(6);
-	let k7 = digit(7);
-	let k8 = digit(8);
-	let k9 = digit(9);
+	function parameter(symbol) {
+		return { symbol: symbol, click: store, parameter: true, background: 'orange', color: 'white' }
+	};
 
+	// --------------- Actions -------------------- //  
 
-	let sR = shortcut('R', () => display="0");
-	let sP = shortcut("%", () => display=shift(Number(display), 2))
-	let sC = shortcut("a%", () => display=convertToMonthlyInterest(Number(display)));
+	function push({ detail: { symbol } }) {
+		
+		if (display.length >= 8)
+			return;
+	
+		if (display == 0)
+			return display = String(symbol);
+			return display += String(symbol);
+	};
 
-	let sK = shortcut('K', () => display+=`000`);
-	let sD = shortcut('.', () => display+=".");
+	function reset(symbol) {
+		display = "0";
+		return '0'
+	};
 
-	let vJ = variable('J');
-	let vV = variable('V');
-	let vC = variable('C');
-	let vA = variable('A');
-	let vT = variable('T');
+	function shift(symbol) {
+		let [ integer, decimal ] = Number(display).toFixed(2).split('.');
+		let number = Number(integer + decimal) / 10 ** (2 + decimal.length);
+
+		display = `${number}`
+		return number;
+	};
+
+	function multiply1000() {
+		'000'.split('').forEach(push)
+	};
+
+	function convert(symbol) {
+		let number = shift('%');
+		let interest = Math.pow((1 + number), 1/12) - 1;
+
+		interest.split('').forEach(push);
+
+		return interest;
+	};
+
+	function putDecimal() {
+		display += '.';
+	};
+
+	// ----------------- Memory ----------------------- //
+
+	let memory = new Map;
+
+	init('J');
+	init('V');
+	init('C');
+	init('A');
+	init('T');
+
+	function resetMem(parameter) {
+		set(parameter, null);
+	};
+
+	function init(param) {
+		set(param, null);
+	};
+
+	function set(param, value) {
+		memory.set(param, { value: value, filled: value != null });
+	}
+
+	// --------------- Parameter ----------------------- //
+
+	function store({ detail: { symbol } }) {
+
+		let entries = memory.entries();
+		let parameter;
+
+		let ready = true;
+
+		for (parameter of entries) {
+			ready = ready && (symbol == parameter[0] || parameter[1].filled);
+
+			if (!ready)
+				break;
+		};
+
+		if (ready)
+			return calculate(symbol);
+		
+		set(symbol, Number(display));
+		console.log({ symbol, memory, ready })
+	};
+
+	// ---------------- Parameter ------------------ //
+
+	function calculate(symbol) {
+
+		let J = memory.get('J').value;
+		let V = memory.get(`V`).value;
+		let C = memory.get('C').value;
+		let A = memory.get('A').value;
+		let T = memory.get('T').value
+
+		let table = {
+			V: () => {
+
+				let m = (1 + J) ** T;
+				let v = (C * J * m + A * m - A) / J;
+				
+				return v;
+			},
+
+			C: () => {
+
+				let m = (1 + J) ** T;
+				let c = (V / m) + A / ( J * m ) - A / J;
+
+				return c;
+			},
+
+			A: () => {
+
+				let m = (1 + J) ** T;
+				let n = J * ( C * m - V);
+				let d = 1 - m;
+				let a = n / d;
+
+				return a;
+			},	
+
+			T: () => {
+				
+				let f = Math.log10(V * J + A)
+				let s = Math.log10(C * J + A);
+				let d = Math.log10(1 + J);
+
+				let t = ( f - s ) / d;
+				
+				return t;
+			}
+		};
+
+		if (symbol === 'J')
+			return 'Error'.split('').forEach(push);
+			
+		let result = table[symbol]();
+		
+		display = result.toFixed(2);
+		console.log(result.toFixed)
+			//table[symbol]().toString().split('').forEach(digit => push({ detail: { symbol: digit } }))
+	};
+
 
 	let keyboard = [
-		sR, sP, sC, vJ,
-		k7, k8, k9, vV,
-		k4, k5, k6, vC,
-		k1, k2, k3, vA,
-		sK, k0, sD, vT
+		shortcut('R', reset), 
+		shortcut('%', shift), 
+		shortcut(`a%`, convert),
+
+		parameter('J'),
+
+		digit(7),
+		digit(8), 
+		digit(9), 
+		
+		parameter('V'),
+
+		digit(4),
+		digit(5),
+		digit(6), 
+		
+		parameter('C'),
+
+		digit(1), 
+		digit(2), 
+		digit(3),
+		
+		parameter('A'),
+
+		shortcut(`K`, multiply1000),
+		
+		digit(0),
+		
+		shortcut(`.`, putDecimal),
+
+		parameter('T')
 	];
-
-	function shift(number, houses) {
-		let [ integer, decimal ] = String(Number(number).toFixed(2)).split('.');
-
-		return Number(integer + decimal) / 10 ** (houses + decimal.length);
-	};
-
-	function convertToMonthlyInterest(interest) {
-		interest = shift(interest, 2);
-
-		return (Math.pow((1 + interest), 1/12) - 1).toFixed(5);
-	};
 
 </script>
 
 <div class=app>
 	<div class=screen>{display}</div>
 	<div class=keyboard>
-		{#each keyboard as key}
-			<!-- svelte-ignore a11y-click-events-have-key-events -->
-			<div on:click={key.callback} class={key.classes} id={key.id}>{key.symbol}</div>
+		{#each keyboard as { parameter, symbol, click, background, color }}
+			{#if parameter}
+				<Parameter {symbol} {background} {color} on:press={click}/>
+			{:else}
+				<Key {symbol} {background} {color} on:click={click}/>
+			{/if}
 		{/each}
 	</div>
 </div>
@@ -137,9 +285,9 @@
 
 	.screen {
 		width: 100%;
-		height: 40%;
+		height: 35%;
 
-		font-weight: 600;
+		font-weight: 400;
 		font-size: 12vh;
 
 		display: flex;
@@ -154,31 +302,7 @@
 		gap: 15px 15px;
 
 		place-items: center;
-		height: 60%;
-	}
-
-	.key {
-		border-radius: 50%;
-		width: 100%;
-		height: 100%;
-		background-color: #333;
-
-		font-weight: 600;
-		font-size: 4vh;
-
-		display: grid;
-		place-items: center;
-	}
-
-	.shortcut {
-		color: black;
-		background-color: #a5a5a5;
-
-	}
-
-	.variable {
-		color: white;
-		background-color: orange;
+		height: 65%;
 	}
 
 </style>

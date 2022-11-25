@@ -1,150 +1,178 @@
 <script>
-    import { onMount } from "svelte";
-    import Key from "./Key.svelte";
+
     import Parameter from "./Parameter.svelte";
-
-/**
- * -
- * 00
- * K
- * 
- */
-
+    import Shortcut from "./Shortcut.svelte";
+	import Digit from './Digit.svelte'
 
  	let display = "0";
+	let Display = new class {
 
-	/*
-	function variable(symbol) {
-		return {
-			id: symbol,
-			symbol: symbol,
-			classes: 'key variable',
-			callback: () => {
+		get value() {
+			return Number(display);
+		};
 
-				const entries = Object.entries(parameters);
-				const filled = entries.every(([key, value]) => key == symbol || value != null);
+		get string() {
+			return String(display);
+		};
 
-				console.log(filled);
-				if (filled) {
-					console.log('I am calculating');
-					return display = calculate(symbol);
-				}
-					
-				display = parameters[symbol] = Number(display);
-				console.log(parameters);
-				console.log('Now I am storing the parameter');
-			},
+		get length() {
+			return String(display).length;
+		};
+
+		set(value) {
+			display = String(value).slice(0, 6);
+		};
+
+		push(digit) {
+			if (display.length >= 6)
+				return;
+	
+			if (Display.string === `0`)
+				return display = String(digit);
+
+			if (digit === '-')
+				return display = String(digit) + display;
+				return display += String(digit)
+		};
+
+		pop(length = 1) {
+			display = display.slice(0, display.length - length);
 		};
 	};
 
-	/*
-	function shortcut(symbol, callback) {
-		return {
-			id: symbol,
-			symbol: symbol,
-			classes: 'key shortcut',
-			callback: callback,
-		};
-	};*/
+	function format(string = '') {
 
-	/*	
-	function digit(symbol) {
-		return {
-			id: symbol,
-			symbol: symbol,
-			classes: 'key digit',
-			callback: event => display == "0"? display = String(symbol) : display += String(symbol),
+		let hasDecimalPoint = /\./.test(string);    
+		let isNegative = /^-/.test(string);
+			
+		let integer = string; 
+		let decimal = '';
+		let sign = '';
+			
+		if (hasDecimalPoint) {
+			integer = string.split('.')[0];
+			decimal = string.split('.')[1];
 		};
+
+		if (isNegative) {
+			sign = '-';
+			integer = integer.replace('-', '');
+		}; 
+
+		let classes = /\d{1,3}/g;
+		let pretty = '';
+
+		pretty = integer.split('').reverse('').join('').match(classes).join('.').split('').reverse().join('')
+		pretty = sign + pretty + ( hasDecimalPoint? ',' : '' ) + decimal;
+
+		return pretty;
 	};
-	*/
 
 	function digit(symbol) {
-		return { symbol: symbol, click: push, parameter: false, background: '#333', color: 'white' }
+		return { symbol: symbol, callback: { click: push }, type:'digit' }
 	};
 	
 	function shortcut(symbol, callback) {
-		return { symbol: symbol, click: callback, parameter: false, background: '#a5a5a5', color: 'black' }
+		return { symbol: symbol, callback: { click: callback }, type:`shortcut`}
 	};
 
 	function parameter(symbol) {
-		return { symbol: symbol, click: store, parameter: true, background: 'orange', color: 'white' }
+		return { symbol: symbol, callback: { press: store, unpress: null }, type: `parameter`, }
 	};
 
 	// --------------- Actions -------------------- //  
 
 	function push({ detail: { symbol } }) {
-		
-		if (display.length >= 8)
-			return;
-	
-		if (display == 0)
-			return display = String(symbol);
-			return display += String(symbol);
+		Display.push(symbol);
 	};
 
-	function reset(symbol) {
-		display = "0";
-		return '0'
+	function reset() {
+		Display.set('0');
 	};
 
-	function shift(symbol) {
-		let [ integer, decimal ] = Number(display).toFixed(2).split('.');
-		let number = Number(integer + decimal) / 10 ** (2 + decimal.length);
+	function shift() {
 
-		display = `${number}`
-		return number;
+		let orders = 2;
+
+		let hasDecimalPoint = /\./.test(Display.string);    
+		let isNegative = /^-/.test(Display.string);
+
+		let integer = Display.string; 
+		let decimal = '';
+		let sign = '';
+
+		if (hasDecimalPoint) {
+			integer = Display.string.split('.')[0];
+			decimal = Display.string.split('.')[1];
+		};
+
+		if (isNegative) {
+			sign = '-';
+			integer = integer.replace('-', '');
+		}; 
+
+		let number = Number(integer + decimal) / 10 ** (orders + decimal.length);
+		let pretty = sign + number.toString();
+
+		Display.set(pretty);
 	};
 
 	function multiply1000() {
-		'000'.split('').forEach(push)
+		Display.set(Display.value * 1000);
 	};
 
-	function convert(symbol) {
-		let number = shift('%');
-		let interest = Math.pow((1 + number), 1/12) - 1;
+	function convert() {
+		shift();
 
-		interest.split('').forEach(push);
-
-		return interest;
+		Display.set(Math.pow((1 + Display.value), 1/12) - 1)
 	};
 
 	function putDecimal() {
-		display += '.';
+		Display.push('.')
 	};
 
 	// ----------------- Memory ----------------------- //
 
-	let memory = new Map;
+	let Memory = new class {
 
-	init('J');
-	init('V');
-	init('C');
-	init('A');
-	init('T');
+		constructor() {
+			this.memory = new Map
+		};
 
-	function resetMem(parameter) {
-		set(parameter, null);
-	};
+		init(parameter) {
+			this.set(parameter, null)
+		};
 
-	function init(param) {
-		set(param, null);
-	};
+		set(parameter, value) {
+			console.log({ parameter, value })
+			this.memory.set(parameter, { value, filled: value != null });
+		};
 
-	function set(param, value) {
-		memory.set(param, { value: value, filled: value != null });
+		get(parameter) {
+			return this.memory.get(parameter).value;
+		}
+
+		[Symbol.iterator]() {
+			return this.memory.entries();
+		};
 	}
+
+	Memory.init('J');
+	Memory.init('V');
+	Memory.init('C');
+	Memory.init('A');
+	Memory.init('T');
 
 	// --------------- Parameter ----------------------- //
 
 	function store({ detail: { symbol } }) {
 
-		let entries = memory.entries();
-		let parameter;
-
 		let ready = true;
+		let parameter;
+		let state;
 
-		for (parameter of entries) {
-			ready = ready && (symbol == parameter[0] || parameter[1].filled);
+		for ([ parameter, state ] of Memory) {
+			ready = ready && (symbol == parameter || state.filled);
 
 			if (!ready)
 				break;
@@ -152,22 +180,20 @@
 
 		if (ready)
 			return calculate(symbol);
-		
-		set(symbol, Number(display));
-		console.log({ symbol, memory, ready })
+			return Memory.set(symbol, Display.value);
 	};
 
 	// ---------------- Parameter ------------------ //
 
-	function calculate(symbol) {
+	function calculate(toSolveFor) {
 
-		let J = memory.get('J').value;
-		let V = memory.get(`V`).value;
-		let C = memory.get('C').value;
-		let A = memory.get('A').value;
-		let T = memory.get('T').value
+		let J = Memory.get('J');
+		let V = Memory.get(`V`);
+		let C = Memory.get('C');
+		let A = Memory.get('A');
+		let T = Memory.get('T');
 
-		let table = {
+		let equation = {
 			V: () => {
 
 				let m = (1 + J) ** T;
@@ -206,16 +232,11 @@
 			}
 		};
 
-		if (symbol === 'J')
-			return 'Error'.split('').forEach(push);
-			
-		let result = table[symbol]();
+		if (toSolveFor === 'J')
+			return Display.set('Error');
 		
-		display = result.toFixed(2);
-		console.log(result.toFixed)
-			//table[symbol]().toString().split('').forEach(digit => push({ detail: { symbol: digit } }))
+		Display.set(equation[toSolveFor]());
 	};
-
 
 	let keyboard = [
 		shortcut('R', reset), 
@@ -250,17 +271,18 @@
 
 		parameter('T')
 	];
-
 </script>
 
 <div class=app>
-	<div class=screen>{display}</div>
+	<div class=screen>{format(display)}</div>
 	<div class=keyboard>
-		{#each keyboard as { parameter, symbol, click, background, color }}
-			{#if parameter}
-				<Parameter {symbol} {background} {color} on:press={click}/>
-			{:else}
-				<Key {symbol} {background} {color} on:click={click}/>
+		{#each keyboard as { type, symbol, callback }}
+			{#if type =='parameter'}
+				<Parameter {symbol} on:press={callback.press} on:unpress={callback.unpress}/>
+			{:else if type == 'digit'}
+				<Digit {symbol} on:click={callback.click}/>
+			{:else if type == 'shortcut'}
+				<Shortcut {symbol} on:click={callback.click}/>
 			{/if}
 		{/each}
 	</div>

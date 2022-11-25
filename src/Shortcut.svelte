@@ -5,42 +5,37 @@
 
     export let symbol;
 
-    let pressed = false;
-
     function handleClick() {
-        pressed = !pressed;
-        if (pressed)
-            return dispatch('press', { symbol})
-            return dispatch('unpress', { symbol })
+        dispatch('click', { symbol });
     };
 
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
-
-<div class=parameter class:pressed on:click={handleClick}>
-{symbol}    
+<div class=shortcut on:click={handleClick}>
+{symbol}
 </div>
 
 <style>
-    .parameter {
+    .shortcut {
 		border-radius: 50%;
         border: 0;
 		width: 100%;
 		height: 100%;
-		background-color: orange;
-        color: white;
 
-		font-weight: 600;
+        background-color: #a5a5a5;
+        color: black;
+
+		font-weight: 650;
 		font-size: 4vh;
 
 		display: grid;
 		place-items: center;
-        transition: 0.5s;
+        transition: 1s cubic-bezier(0.075, 0.82, 0.165, 1);
 	}
 
-    .pressed {
-        color: orange;
+    .shortcut:active {
         background-color: white;
     }
+
 </style>

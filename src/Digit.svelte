@@ -4,8 +4,6 @@
     let dispatch = createEventDispatcher();
 
     export let symbol;
-    export let background;
-    export let color;
 
     function handleClick() {
         dispatch('click', { symbol });
@@ -14,22 +12,30 @@
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
-<div style:background-color={background} style:color on:click={handleClick}>
+<div class=digit on:click={handleClick}>
 {symbol}
 </div>
 
 <style>
-    div {
+    .digit {
 		border-radius: 50%;
+        border: 0;
 		width: 100%;
 		height: 100%;
-		background-color: #333;
+
+        background-color: #333;
+        color: white;
 
 		font-weight: 650;
 		font-size: 4vh;
 
 		display: grid;
 		place-items: center;
+        transition: 1s cubic-bezier(0.075, 0.82, 0.165, 1);
 	}
+
+    .digit:active {
+        background-color: rgb(96, 96, 96)
+    }
 
 </style>

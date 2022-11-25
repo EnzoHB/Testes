@@ -6,6 +6,12 @@ html, body {
 
 body {
 	background-color: black;
+	user-select: none;
+    user-zoom: none;
+
+	-webkit-user-select: none;
+	-webkit-user-drag: none;
+
 	color: #333;
 	margin: 0;
 	/*padding: 8px;*/

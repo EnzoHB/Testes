@@ -598,7 +598,7 @@ var app = (function () {
     			div = element("div");
     			t = text(/*symbol*/ ctx[0]);
     			attr_dev(div, "class", "shortcut svelte-177di4y");
-    			add_location(div, file$2, 14, 0, 289);
+    			add_location(div, file$2, 13, 0, 287);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -715,7 +715,7 @@ var app = (function () {
     		c: function create() {
     			div = element("div");
     			t = text(/*symbol*/ ctx[0]);
-    			attr_dev(div, "class", "digit svelte-dzplju");
+    			attr_dev(div, "class", "digit svelte-o4cy2x");
     			add_location(div, file$1, 14, 0, 289);
     		},
     		l: function claim(nodes) {
@@ -827,23 +827,24 @@ var app = (function () {
 
     function get_each_context(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[14] = list[i].type;
-    	child_ctx[15] = list[i].symbol;
-    	child_ctx[16] = list[i].callback;
+    	child_ctx[16] = list[i].type;
+    	child_ctx[17] = list[i].symbol;
+    	child_ctx[18] = list[i].callback;
     	return child_ctx;
     }
 
-    // (284:32) 
+    // (299:32) 
     function create_if_block_2(ctx) {
     	let shortcut_1;
     	let current;
 
     	shortcut_1 = new Shortcut({
-    			props: { symbol: /*symbol*/ ctx[15] },
+    			props: { symbol: /*symbol*/ ctx[17] },
     			$$inline: true
     		});
 
-    	shortcut_1.$on("click", /*callback*/ ctx[16].click);
+    	shortcut_1.$on("click", /*callback*/ ctx[18].click);
+    	shortcut_1.$on("press", /*callback*/ ctx[18].press);
 
     	const block = {
     		c: function create() {
@@ -872,24 +873,24 @@ var app = (function () {
     		block,
     		id: create_if_block_2.name,
     		type: "if",
-    		source: "(284:32) ",
+    		source: "(299:32) ",
     		ctx
     	});
 
     	return block;
     }
 
-    // (282:29) 
+    // (297:29) 
     function create_if_block_1(ctx) {
     	let digit_1;
     	let current;
 
     	digit_1 = new Digit({
-    			props: { symbol: /*symbol*/ ctx[15] },
+    			props: { symbol: /*symbol*/ ctx[17] },
     			$$inline: true
     		});
 
-    	digit_1.$on("click", /*callback*/ ctx[16].click);
+    	digit_1.$on("click", /*callback*/ ctx[18].click);
 
     	const block = {
     		c: function create() {
@@ -918,25 +919,25 @@ var app = (function () {
     		block,
     		id: create_if_block_1.name,
     		type: "if",
-    		source: "(282:29) ",
+    		source: "(297:29) ",
     		ctx
     	});
 
     	return block;
     }
 
-    // (280:3) {#if type =='parameter'}
+    // (295:3) {#if type =='parameter'}
     function create_if_block(ctx) {
     	let parameter_1;
     	let current;
 
     	parameter_1 = new Parameter({
-    			props: { symbol: /*symbol*/ ctx[15] },
+    			props: { symbol: /*symbol*/ ctx[17] },
     			$$inline: true
     		});
 
-    	parameter_1.$on("press", /*callback*/ ctx[16].press);
-    	parameter_1.$on("unpress", /*callback*/ ctx[16].unpress);
+    	parameter_1.$on("press", /*callback*/ ctx[18].press);
+    	parameter_1.$on("unpress", /*callback*/ ctx[18].unpress);
 
     	const block = {
     		c: function create() {
@@ -965,14 +966,14 @@ var app = (function () {
     		block,
     		id: create_if_block.name,
     		type: "if",
-    		source: "(280:3) {#if type =='parameter'}",
+    		source: "(295:3) {#if type =='parameter'}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (279:2) {#each keyboard as { type, symbol, callback }}
+    // (294:2) {#each keyboard as { type, symbol, callback }}
     function create_each_block(ctx) {
     	let current_block_type_index;
     	let if_block;
@@ -982,9 +983,9 @@ var app = (function () {
     	const if_blocks = [];
 
     	function select_block_type(ctx, dirty) {
-    		if (/*type*/ ctx[14] == 'parameter') return 0;
-    		if (/*type*/ ctx[14] == 'digit') return 1;
-    		if (/*type*/ ctx[14] == 'shortcut') return 2;
+    		if (/*type*/ ctx[16] == 'parameter') return 0;
+    		if (/*type*/ ctx[16] == 'digit') return 1;
+    		if (/*type*/ ctx[16] == 'shortcut') return 2;
     		return -1;
     	}
 
@@ -1030,7 +1031,7 @@ var app = (function () {
     		block,
     		id: create_each_block.name,
     		type: "each",
-    		source: "(279:2) {#each keyboard as { type, symbol, callback }}",
+    		source: "(294:2) {#each keyboard as { type, symbol, callback }}",
     		ctx
     	});
 
@@ -1045,7 +1046,9 @@ var app = (function () {
     	let t1;
     	let div1;
     	let current;
-    	let each_value = /*keyboard*/ ctx[1];
+    	let mounted;
+    	let dispose;
+    	let each_value = /*keyboard*/ ctx[2];
     	validate_each_argument(each_value);
     	let each_blocks = [];
 
@@ -1069,12 +1072,12 @@ var app = (function () {
     				each_blocks[i].c();
     			}
 
-    			attr_dev(div0, "class", "screen svelte-cu4rbm");
-    			add_location(div0, file, 276, 1, 5129);
-    			attr_dev(div1, "class", "keyboard svelte-cu4rbm");
-    			add_location(div1, file, 277, 1, 5173);
-    			attr_dev(div2, "class", "app svelte-cu4rbm");
-    			add_location(div2, file, 275, 0, 5111);
+    			attr_dev(div0, "class", "screen svelte-nry8rw");
+    			add_location(div0, file, 291, 1, 5469);
+    			attr_dev(div1, "class", "keyboard svelte-nry8rw");
+    			add_location(div1, file, 292, 1, 5536);
+    			attr_dev(div2, "class", "app svelte-nry8rw");
+    			add_location(div2, file, 288, 0, 5389);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -1091,12 +1094,17 @@ var app = (function () {
     			}
 
     			current = true;
+
+    			if (!mounted) {
+    				dispose = listen_dev(div0, "click", /*toggleMinus*/ ctx[1], false, false, false);
+    				mounted = true;
+    			}
     		},
     		p: function update(ctx, [dirty]) {
     			if ((!current || dirty & /*display*/ 1) && t0_value !== (t0_value = format(/*display*/ ctx[0]) + "")) set_data_dev(t0, t0_value);
 
-    			if (dirty & /*keyboard*/ 2) {
-    				each_value = /*keyboard*/ ctx[1];
+    			if (dirty & /*keyboard*/ 4) {
+    				each_value = /*keyboard*/ ctx[2];
     				validate_each_argument(each_value);
     				let i;
 
@@ -1144,6 +1152,8 @@ var app = (function () {
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(div2);
     			destroy_each(each_blocks, detaching);
+    			mounted = false;
+    			dispose();
     		}
     	};
 
@@ -1158,7 +1168,7 @@ var app = (function () {
     	return block;
     }
 
-    function format(string = '') {
+    function format(string) {
     	let hasDecimalPoint = (/\./).test(string);
     	let isNegative = (/^-/).test(string);
     	let integer = string;
@@ -1176,15 +1186,16 @@ var app = (function () {
     	}
     	let classes = /\d{1,3}/g;
     	let pretty = '';
+    	console.log({ string, integer, decimal, sign });
     	pretty = integer.split('').reverse('').join('').match(classes).join('.').split('').reverse().join('');
     	pretty = sign + pretty + (hasDecimalPoint ? ',' : '') + decimal;
     	return pretty;
     }
 
-    function shortcut(symbol, callback) {
+    function shortcut(symbol, click, press) {
     	return {
     		symbol,
-    		callback: { click: callback },
+    		callback: { click, press },
     		type: `shortcut`
     	};
     }
@@ -1212,9 +1223,10 @@ var app = (function () {
     		}
 
     		push(digit) {
-    			if (display.length >= 6) return;
-    			if (Display.string === `0`) return $$invalidate(0, display = String(digit));
+    			if (display.length >= 8) return;
+    			if (digit === '.') return $$invalidate(0, display += String(digit));
     			if (digit === '-') return $$invalidate(0, display = String(digit) + display);
+    			if (Display.string === `0`) return $$invalidate(0, display = String(digit));
     			return $$invalidate(0, display += String(digit));
     		}
 
@@ -1234,7 +1246,7 @@ var app = (function () {
     	function parameter(symbol) {
     		return {
     			symbol,
-    			callback: { press: store, unpress: null },
+    			callback: { press: store, unpress: deleteFromMemory },
     			type: `parameter`
     		};
     	}
@@ -1283,6 +1295,10 @@ var app = (function () {
     		Display.push('.');
     	}
 
+    	function toggleMinus() {
+    		Display.set(-Display.value);
+    	}
+
     	// ----------------- Memory ----------------------- //
     	let Memory = new (class {
     		constructor() {
@@ -1325,6 +1341,10 @@ var app = (function () {
     		}
     		if (ready) return calculate(symbol);
     		return Memory.set(symbol, Display.value);
+    	}
+
+    	function deleteFromMemory({ detail: { symbol } }) {
+    		Memory.set(symbol, null);
     	}
 
     	// ---------------- Parameter ------------------ //
@@ -1385,7 +1405,7 @@ var app = (function () {
     		parameter('A'),
     		shortcut(`K`, multiply1000),
     		digit(0),
-    		shortcut(`.`, putDecimal),
+    		shortcut(`,`, putDecimal),
     		parameter('T')
     	];
 
@@ -1411,8 +1431,10 @@ var app = (function () {
     		multiply1000,
     		convert,
     		putDecimal,
+    		toggleMinus,
     		Memory,
     		store,
+    		deleteFromMemory,
     		calculate,
     		keyboard
     	});
@@ -1421,14 +1443,14 @@ var app = (function () {
     		if ('display' in $$props) $$invalidate(0, display = $$props.display);
     		if ('Display' in $$props) Display = $$props.Display;
     		if ('Memory' in $$props) Memory = $$props.Memory;
-    		if ('keyboard' in $$props) $$invalidate(1, keyboard = $$props.keyboard);
+    		if ('keyboard' in $$props) $$invalidate(2, keyboard = $$props.keyboard);
     	};
 
     	if ($$props && "$$inject" in $$props) {
     		$$self.$inject_state($$props.$$inject);
     	}
 
-    	return [display, keyboard];
+    	return [display, toggleMinus, keyboard];
     }
 
     class App extends SvelteComponentDev {

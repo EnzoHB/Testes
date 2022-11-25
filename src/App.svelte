@@ -24,14 +24,17 @@
 		};
 
 		push(digit) {
-			if (display.length >= 6)
+			if (display.length >= 8)
 				return;
-	
-			if (Display.string === `0`)
-				return display = String(digit);
+
+			if (digit === '.') 
+				return display += String(digit);
 
 			if (digit === '-')
 				return display = String(digit) + display;
+	
+			if (Display.string === `0`)
+				return display = String(digit);
 				return display += String(digit)
 		};
 
@@ -40,7 +43,7 @@
 		};
 	};
 
-	function format(string = '') {
+	function format(string) {
 
 		let hasDecimalPoint = /\./.test(string);    
 		let isNegative = /^-/.test(string);
@@ -62,6 +65,8 @@
 		let classes = /\d{1,3}/g;
 		let pretty = '';
 
+		console.log({string, integer, decimal, sign})
+
 		pretty = integer.split('').reverse('').join('').match(classes).join('.').split('').reverse().join('')
 		pretty = sign + pretty + ( hasDecimalPoint? ',' : '' ) + decimal;
 
@@ -72,12 +77,12 @@
 		return { symbol: symbol, callback: { click: push }, type:'digit' }
 	};
 	
-	function shortcut(symbol, callback) {
-		return { symbol: symbol, callback: { click: callback }, type:`shortcut`}
+	function shortcut(symbol, click, press) {
+		return { symbol: symbol, callback: { click, press }, type:`shortcut`}
 	};
 
 	function parameter(symbol) {
-		return { symbol: symbol, callback: { press: store, unpress: null }, type: `parameter`, }
+		return { symbol: symbol, callback: { press: store, unpress: deleteFromMemory }, type: `parameter`, }
 	};
 
 	// --------------- Actions -------------------- //  
@@ -131,6 +136,10 @@
 		Display.push('.')
 	};
 
+	function toggleMinus() {
+		Display.set(-Display.value);
+	};
+
 	// ----------------- Memory ----------------------- //
 
 	let Memory = new class {
@@ -181,6 +190,10 @@
 		if (ready)
 			return calculate(symbol);
 			return Memory.set(symbol, Display.value);
+	};
+
+	function deleteFromMemory({ detail: { symbol } }) {
+		Memory.set(symbol, null)
 	};
 
 	// ---------------- Parameter ------------------ //
@@ -267,14 +280,16 @@
 		
 		digit(0),
 		
-		shortcut(`.`, putDecimal),
+		shortcut(`,`, putDecimal),
 
 		parameter('T')
 	];
 </script>
 
 <div class=app>
-	<div class=screen>{format(display)}</div>
+	
+	<!-- svelte-ignore a11y-click-events-have-key-events -->
+	<div on:click={toggleMinus} class=screen>{format(display)}</div>
 	<div class=keyboard>
 		{#each keyboard as { type, symbol, callback }}
 			{#if type =='parameter'}
@@ -282,7 +297,7 @@
 			{:else if type == 'digit'}
 				<Digit {symbol} on:click={callback.click}/>
 			{:else if type == 'shortcut'}
-				<Shortcut {symbol} on:click={callback.click}/>
+				<Shortcut {symbol} on:click={callback.click} on:press={callback.press}/>
 			{/if}
 		{/each}
 	</div>
@@ -310,7 +325,7 @@
 		height: 35%;
 
 		font-weight: 400;
-		font-size: 12vh;
+		font-size: 10vh;
 
 		display: flex;
 		align-items: flex-end;

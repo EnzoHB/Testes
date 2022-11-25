@@ -31,11 +31,11 @@
 
 		display: grid;
 		place-items: center;
-        transition: 1s cubic-bezier(0.075, 0.82, 0.165, 1);
+        transition: 2s ease-out
 	}
 
     .digit:active {
-        background-color: rgb(96, 96, 96)
+        background-color: rgb(122, 122, 122)
     }
 
 </style>

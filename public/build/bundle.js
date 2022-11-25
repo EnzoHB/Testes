@@ -1075,21 +1075,21 @@ var app = (function () {
     			t5 = space();
     			div4 = element("div");
     			attr_dev(div0, "class", "money svelte-drvore");
-    			add_location(div0, file, 10, 2, 248);
+    			add_location(div0, file, 10, 2, 258);
     			attr_dev(div1, "class", "parameters svelte-drvore");
-    			add_location(div1, file, 9, 1, 223);
+    			add_location(div1, file, 9, 1, 232);
     			attr_dev(div2, "class", "contribution");
-    			add_location(div2, file, 18, 2, 450);
+    			add_location(div2, file, 18, 2, 468);
     			attr_dev(div3, "class", "months");
-    			add_location(div3, file, 20, 3, 503);
+    			add_location(div3, file, 20, 3, 523);
     			attr_dev(div4, "class", "years");
-    			add_location(div4, file, 21, 3, 531);
+    			add_location(div4, file, 21, 3, 552);
     			attr_dev(div5, "class", "time");
-    			add_location(div5, file, 19, 2, 483);
+    			add_location(div5, file, 19, 2, 502);
     			attr_dev(div6, "class", "results");
-    			add_location(div6, file, 17, 1, 428);
+    			add_location(div6, file, 17, 1, 445);
     			attr_dev(div7, "class", "app");
-    			add_location(div7, file, 8, 0, 206);
+    			add_location(div7, file, 8, 0, 214);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
